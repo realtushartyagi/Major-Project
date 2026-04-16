@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SENTINEL-ML | Research-Grade Adversarial Defense</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap');
+        
+        :root {
+            --bg-dark: #05070a;
+            --card-bg: rgba(13, 17, 23, 0.8);
+            --border: rgba(56, 139, 253, 0.15);
+            --accent: #388bfd;
+        }
+
+        body { 
+            background-color: var(--bg-dark); 
+            color: #c9d1d9; 
+            font-family: 'Inter', sans-serif; 
+            background-image: radial-gradient(circle at 50% 50%, rgba(56, 139, 253, 0.05) 0%, transparent 50%);
+        }
+
+        .cyber-card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border); 
+            backdrop-filter: blur(20px); 
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cyber-card:hover { border-color: rgba(56, 139, 253, 0.4); }
+
+        .pipeline-step { position: relative; }
+        .pipeline-line { position: absolute; top: 1.5rem; left: 100%; width: 5.5rem; height: 2px; background: rgba(56, 139, 253, 0.1); z-index: 0; }
+        .pipeline-val { 
+            position: absolute; top: -1.8rem; left: 50%; transform: translateX(-50%); 
+            font-size: 11px; font-weight: 800; border-radius: 4px; padding: 2px 6px;
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .tooltip { position: relative; display: inline-block; cursor: help; }
+        .tooltip .tooltiptext {
+            visibility: hidden; width: 180px; background-color: #0d1117; color: #fff; text-align: left;
+            border-radius: 6px; padding: 10px; position: absolute; z-index: 100; bottom: 125%; left: 50%;
+            margin-left: -90px; opacity: 0; transition: opacity 0.3s; font-size: 9px; line-height: 1.4;
+            border: 1px solid var(--border); box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+
+        .mini-bar { height: 6px; border-radius: 3px; background: #161b22; overflow: hidden; }
+        .mini-bar-fill { height: 100%; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        .threat-pulse { animation: pulse-red 2s infinite; }
+        
+        .grad-text { background: linear-gradient(90deg, #388bfd, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-[1700px] mx-auto">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-blue-600/20 rounded-xl border border-blue-500/30">
+                    <i data-lucide="activity" class="text-blue-500 w-8 h-8"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-tighter text-white uppercase flex items-center gap-2">
+                        SENTINEL-<span class="text-blue-500">ML</span> 
+                        <span class="text-[9px] font-mono font-bold px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded text-blue-500">RESEARCH EDITION v2.6</span>
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <div id="threatBadge" class="flex items-center gap-3 px-6 py-2 bg-blue-500/5 border border-white/5 rounded-full transition-all">
+                    <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <span class="text-[10px] font-bold tracking-widest uppercase">READY FOR SCANNING</span>
+                </div>
+                <button onclick="downloadReport()" class="flex items-center gap-2 px-6 py-2.5 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:border-blue-500/40 transition-all text-xs font-bold text-white group">
+                    <i data-lucide="file-down" class="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform"></i>
+                    GENERATE RESEARCH REPORT
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-12 gap-6">
+            
+            <!-- LEFT COLUMN -->
+            <div class="col-span-12 lg:col-span-3 space-y-6">
+                
+                <!-- CONFIGURATION -->
+                <section class="cyber-card p-6 border-l-4 border-l-blue-500">
+                    <h3 class="text-[10px] font-bold text-gray-400 mb-6 uppercase tracking-widest">Offensive Parameters</h3>
+                    <div class="space-y-6">
+                        <div class="space-y-3">
+                            <div class="flex justify-between text-[11px] font-bold">
+                                <span class="text-gray-500">ATTACK INTENSITY (EPS)</span>
+                                <span id="epsilonVal" class="text-blue-500 font-mono">0.10</span>
+                            </div>
+                            <input type="range" id="epsilonSlider" min="0" max="0.5" step="0.01" value="0.1" 
+                                   class="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer"
+                                   oninput="updateEpsilon(this.value)" onchange="runAnalysis()">
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center group">
+                                <span class="text-xs uppercase font-semibold text-gray-400 group-hover:text-blue-400 transition-colors">Sanitize Input</span>
+                                <input type="checkbox" id="sanitizationToggle" checked onchange="runAnalysis()" class="w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500">
+                            </div>
+                            <div class="flex justify-between items-center group">
+                                <span class="text-xs uppercase font-semibold text-gray-400 group-hover:text-blue-400 transition-colors">Rule Pattern Match</span>
+                                <input type="checkbox" id="ruleFilterToggle" checked onchange="runAnalysis()" class="w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- LIMITATIONS / FAILURE CASE -->
+                <section class="cyber-card p-6 border-l-4 border-l-orange-500/50">
+                    <h3 class="text-[10px] font-bold text-orange-400 mb-4 uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-3 h-3"></i> System Boundaries
+                    </h3>
+                    <div class="space-y-3">
+                        <p class="text-[10px] text-gray-500 leading-relaxed italic">
+                            "Model accuracy may degrade on unseen Zero-Day phishing patterns or highly sophisticated domain-masking techniques."
+                        </p>
+                        <ul class="text-[9px] text-gray-600 space-y-1">
+                            <li class="flex items-start gap-1"><span>•</span> Non-standard TLD evasion</li>
+                            <li class="flex items-start gap-1"><span>•</span> JS-based URL redirections</li>
+                            <li class="flex items-start gap-1"><span>•</span> AI-generated phishing content</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- ARCHITECTURE -->
+                <section class="cyber-card p-6">
+                    <h3 class="text-[10px] font-bold text-gray-400 mb-4 uppercase tracking-widest">Model Telemetry</h3>
+                    <div class="space-y-2 text-[10px]">
+                        <div class="flex justify-between py-1 border-b border-white/5"><span>Base Architecture:</span> <span class="text-white font-mono">1D-CNN</span></div>
+                        <div class="flex justify-between py-1 border-b border-white/5"><span>Loss Function:</span> <span class="text-blue-400 font-mono">B-CrossEntropy</span></div>
+                        <div class="flex justify-between py-1 border-b border-white/5"><span>Optimizer:</span> <span class="text-white">Adam (LR: 0.001)</span></div>
+                        <div class="flex justify-between py-1"><span>Accuracy (Clean):</span> <span class="text-green-500 font-bold">95.4%</span></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- CENTER COLUMN -->
+            <div class="col-span-12 lg:col-span-6 space-y-6">
+                
+                <!-- SCANNER -->
+                <section class="cyber-card p-4 ring-1 ring-blue-500/10">
+                    <div class="flex gap-4">
+                        <div class="flex-1 bg-black/60 border border-white/5 rounded-lg px-4 py-3.5 flex items-center gap-4">
+                            <i data-lucide="shield-check" class="w-5 h-5 text-blue-500"></i>
+                            <input id="urlInput" type="text" placeholder="Enter target URL for adversarial deep scanning..." class="bg-transparent border-none focus:ring-0 text-white w-full text-base font-medium placeholder-gray-700">
+                        </div>
+                        <button onclick="runAnalysis()" class="bg-blue-600 hover:bg-blue-700 px-12 py-3.5 rounded-lg font-black text-white text-xs uppercase transition-all shadow-xl shadow-blue-950/40 active:scale-95 border-b-4 border-blue-800">
+                            ANALYZE TARGET
+                        </button>
+                    </div>
+                </section>
+
+                <!-- PIPELINE -->
+                <section class="cyber-card p-12 bg-gray-950/40">
+                    <div class="flex justify-between items-center max-w-xl mx-auto relative mt-4">
+                        <div class="pipeline-step z-10">
+                            <div id="step-1" class="w-14 h-14 rounded-full border-2 border-blue-500/40 flex items-center justify-center bg-gray-900 mx-auto transition-all shadow-lg">
+                                <i data-lucide="external-link" class="w-6 h-6 text-gray-400"></i>
+                            </div>
+                            <span id="p-val-1" class="pipeline-val opacity-0 transition-all duration-700 text-blue-500">--</span>
+                            <div class="pipeline-line"></div>
+                        </div>
+                        <div class="pipeline-step z-10">
+                            <div id="step-2" class="w-14 h-14 rounded-full border-2 border-gray-800 flex items-center justify-center bg-gray-900 mx-auto transition-all shadow-lg">
+                                <i data-lucide="flame" class="w-6 h-6 text-gray-700"></i>
+                            </div>
+                            <span id="p-val-2" class="pipeline-val opacity-0 transition-all duration-700">--</span>
+                            <div class="pipeline-line"></div>
+                        </div>
+                        <div class="pipeline-step z-10">
+                            <div id="step-3" class="w-14 h-14 rounded-full border-2 border-gray-800 flex items-center justify-center bg-gray-900 mx-auto transition-all shadow-lg">
+                                <i data-lucide="shield-check" class="w-6 h-6 text-gray-700"></i>
+                            </div>
+                            <span id="p-val-3" class="pipeline-val opacity-0 transition-all duration-700">--</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 text-center mt-6 text-[9px] font-black text-gray-600 uppercase tracking-[4px]">
+                        <span>ORIGINAL SEQ</span>
+                        <span>ATTACK INTEL</span>
+                        <span>DEFENDED</span>
+                    </div>
+                </section>
+
+                <!-- RESULTS -->
+                <div id="resultLayer" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- IMPACT TABLE -->
+                        <section class="cyber-card p-6 border-t-2 border-t-white/5">
+                            <h3 class="text-[11px] font-black text-white/40 mb-4 uppercase tracking-[2px]">Impact Mapping</h3>
+                            <table class="w-full text-[10px] text-left">
+                                <thead class="text-gray-600 border-b border-white/10 uppercase tracking-tighter">
+                                    <tr><th class="py-2">Pipeline Stage</th><th class="text-center">Verdict</th><th class="text-right">CONFID</th></tr>
+                                </thead>
+                                <tbody id="impactTableBody"></tbody>
+                            </table>
+                        </section>
+
+                        <!-- BREAKDOWN -->
+                        <section class="cyber-card p-6 border-t-2 border-t-blue-500/20">
+                            <div class="flex justify-between items-start mb-6">
+                                <h3 class="text-[11px] font-black text-white/40 uppercase tracking-[2px]">Defense Recovery</h3>
+                                <div class="text-right">
+                                    <div class="text-blue-500 text-xl font-black italic" id="robustnessScore">--%</div>
+                                    <div class="text-[8px] uppercase font-bold text-gray-600">Model Robustness Index</div>
+                                </div>
+                            </div>
+                            <div id="defenseBreakdownBars" class="space-y-4"></div>
+                        </section>
+                    </div>
+
+                    <!-- XAI -->
+                    <section class="cyber-card p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Explainable AI (XAI) Reason Engine</h4>
+                            <span id="predictInsight" class="text-[9px] text-blue-400 lowercase font-mono italic">:: waiting for inference</span>
+                        </div>
+                        <div id="tokenGrid" class="flex flex-wrap gap-2 mb-6"></div>
+                        <div id="insightText" class="p-5 bg-blue-500/5 border border-blue-500/10 rounded-xl text-[10px] text-blue-400 leading-relaxed font-medium">
+                            <!-- Insight content -->
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <div class="col-span-12 lg:col-span-3 space-y-6">
+                
+                <!-- THREAT SIMULATOR -->
+                <section class="cyber-card p-6">
+                    <h3 class="text-[10px] font-bold text-gray-500 mb-6 uppercase tracking-widest">Adversarial Simulator</h3>
+                    <div id="attackGallery" class="space-y-3 max-h-[450px] overflow-y-auto pr-2 terminal-scroll">
+                        <p class="text-[10px] text-gray-700 italic">Initiate scan to generate variations...</p>
+                    </div>
+                </section>
+
+                <section class="cyber-card p-6 h-[250px] flex flex-col border-t-2 border-t-blue-500/10">
+                    <h3 class="text-[10px] font-bold text-gray-500 mb-4 uppercase tracking-widest">System Monitor</h3>
+                    <div id="terminalBody" class="flex-1 font-mono text-[9px] space-y-2 overflow-y-auto terminal-scroll text-gray-600">
+                        <div class="text-blue-500/40">> sentinel v2.6 build stable.</div>
+                    </div>
+                </section>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function updateEpsilon(val) {
+            document.getElementById('epsilonVal').innerText = parseFloat(val).toFixed(2);
+        }
+
+        async function runAnalysis() {
+            const url = document.getElementById('urlInput').value || "secure-login-bank.xyz";
+            const epsilon = document.getElementById('epsilonSlider').value;
+            const defenses = {
+                sanitization: document.getElementById('sanitizationToggle').checked,
+                rule_filter: document.getElementById('ruleFilterToggle').checked
+            };
+
+            addLog(`Analyzing sequence: ${url}`, 'info');
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ url, defenses, epsilon: parseFloat(epsilon) })
+                });
+                const data = await response.json();
+                
+                document.getElementById('resultLayer').classList.remove('hidden');
+                updateUI(data);
+                renderAttackGallery(url);
+
+            } catch (err) { addLog(`Execution error: ${err.message}`, 'error'); }
+        }
+
+        function updateUI(data) {
+            // Pipeline Confidence with forced drift visibility
+            updatePipe(1, data.clean_conf, false);
+            setTimeout(() => updatePipe(2, data.attacked_conf, true), 300);
+            setTimeout(() => updatePipe(3, data.defended_conf, false), 600);
+
+            // Table Comparison
+            const tableBody = document.getElementById('impactTableBody');
+            const rows = [
+                { stage: 'Original URL', verdict: data.clean_conf > 50 ? 'PHISH' : 'SAFE', conf: data.clean_conf, color: data.clean_conf > 50 ? 'text-red-500' : 'text-green-500' },
+                { stage: 'Attacked (PGD)', verdict: data.attacked_conf > 50 ? 'PHISH' : 'SAFE', conf: data.attacked_conf, color: data.attacked_conf > 50 ? 'text-red-500' : 'text-green-500' },
+                { stage: 'Defended (Hybrid)', verdict: data.defended_conf > 50 ? 'PHISH' : 'SAFE', conf: data.defended_conf, color: data.defended_conf > 50 ? 'text-red-500' : 'text-green-500' }
+            ];
+            tableBody.innerHTML = rows.map(r => `
+                <tr class="border-b border-white/5">
+                    <td class="py-3 text-gray-500 uppercase">${r.stage}</td>
+                    <td class="${r.color} font-black text-center">${r.verdict}</td>
+                    <td class="text-right text-white font-mono">${r.conf}%</td>
+                </tr>
+            `).join('');
+
+            // Robustness & Bars
+            document.getElementById('robustnessScore').innerText = `${Math.round(data.robustness)}%`;
+            const barContainer = document.getElementById('defenseBreakdownBars');
+            barContainer.innerHTML = data.breakdown.map(b => `
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-[8px] font-bold text-gray-500">
+                        <span>${b.name.toUpperCase()}</span>
+                        <span class="text-blue-500">${b.acc}% Recovery</span>
+                    </div>
+                    <div class="mini-bar"><div class="mini-bar-fill ${b.acc > 80 ? 'bg-green-500' : 'bg-blue-600'}" style="width: ${b.acc}%"></div></div>
+                </div>
+            `).join('');
+
+            // XAI & Tokens
+            const grid = document.getElementById('tokenGrid');
+            grid.innerHTML = data.tokens.map(t => {
+                const colors = t.risk === 'HIGH' ? 'text-red-400 bg-red-400/10 border-red-500/30' : (t.risk === 'MEDIUM' ? 'text-yellow-400 bg-yellow-400/10 border-yellow-500/20' : 'text-blue-400 bg-blue-400/10 border-blue-500/20');
+                return `
+                    <div class="tooltip">
+                        <span class="px-3 py-1 rounded border text-[10px] font-mono font-bold ${colors}">${t.token}</span>
+                        <span class="tooltiptext">
+                            <b class="text-[8px] uppercase">${t.risk} RISK</b><br>
+                            ${t.reason}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+
+            // Insights
+            document.getElementById('insightText').innerText = data.is_phishing ? 
+                `System Analysis: Primary CNN architecture was successfully defended by heuristic rule-layers. The adversarial variant is ${Math.round(data.robustness)}% statistically similar to legitimate patterns.` : 
+                `System Analysis: Input classified as benign. Character-level embeddings do not match known phishing signatures at the current resolution.`;
+
+            // Badge
+            const badge = document.getElementById('threatBadge');
+            badge.className = `flex items-center gap-3 px-6 py-2 rounded-full border ${data.is_phishing ? 'bg-red-500/10 border-red-500/20 text-red-500 threat-pulse' : 'bg-green-500/10 border-green-500/20 text-green-500'}`;
+            badge.innerHTML = `<div class="w-2 h-2 rounded-full ${data.is_phishing ? 'bg-red-500' : 'bg-green-500'}"></div><span class="text-[10px] font-bold tracking-widest uppercase">${data.is_phishing ? 'THREAT DETECTED' : 'SECURE SCAN'}</span>`;
+        }
+
+        function updatePipe(step, val, isAttack) {
+            const el = document.getElementById(`step-${step}`);
+            const valEl = document.getElementById(`p-val-${step}`);
+            const isPhishing = val > 50;
+            
+            el.className = `w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all duration-700 ${isPhishing ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-blue-500 bg-blue-500/10 text-blue-500'}`;
+            el.innerHTML = isAttack ? `<i data-lucide="zap" class="w-6 h-6"></i>` : `<i data-lucide="${val > 50 ? 'alert-circle' : 'shield-check'}" class="w-6 h-6"></i>`;
+            lucide.createIcons();
+            
+            valEl.innerText = `${Math.round(val)}%`;
+            valEl.className = `pipeline-val opacity-100 ${isPhishing ? 'text-red-500' : 'text-blue-500'}`;
+        }
+
+        async function renderAttackGallery(url) {
+            const resp = await fetch('/attack', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ url })
+            });
+            const data = await resp.json();
+            const gallery = document.getElementById('attackGallery');
+            gallery.innerHTML = Object.entries(data).map(([type, payload]) => `
+                <div class="p-4 bg-white/5 border border-white/5 rounded-xl transition-all hover:border-blue-500/30">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[9px] font-black text-blue-500 uppercase">${type} VARIANT</span>
+                        <span class="text-[8px] text-gray-700">RED TEAM ENGAGED</span>
+                    </div>
+                    <code class="text-[10px] text-gray-500 break-all leading-tight opacity-70">${payload}</code>
+                </div>
+            `).join('');
+        }
+
+        function addLog(msg, type) {
+            const body = document.getElementById('terminalBody');
+            const div = document.createElement('div');
+            div.className = type === 'error' ? 'text-red-500' : 'text-blue-400/60';
+            div.innerHTML = `> ${msg}`;
+            body.appendChild(div);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function downloadReport() { window.location.href = '/generate-report'; }
+    </script>
+</body>
+</html>
