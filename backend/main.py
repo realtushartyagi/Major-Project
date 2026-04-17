@@ -37,7 +37,7 @@ app.add_middleware(
 )
 
 # Mount Static Files
-app.mount("/static", StaticFiles(directory="../frontend"), name="static")
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "frontend")), name="static")
 
 # Global state
 model = None
@@ -73,7 +73,7 @@ def startup_event():
 
 @app.get("/")
 async def read_index():
-    return FileResponse("../frontend/index.html")
+    return FileResponse(os.path.join(BASE_DIR, "frontend", "index.html"))
 
 class URLRequest(BaseModel):
     url: str
