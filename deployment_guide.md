@@ -106,7 +106,12 @@ If you want to host the **Backend on Render** and the **Frontend on Vercel**, fo
 3.  **Root Directory**: Leave as `.` (project root).
 4.  **Build Command**: `pip install -r backend/requirements.txt`
 5.  **Start Command**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-6.  **Environment Variables**: Ensure you have enough memory (at least 2GB Starter instance recommended).
+6.  **Environment Variables**: 
+    - Ensure you have enough memory (at least 2GB Starter instance recommended).
+    - **PYTHON_VERSION**: Set to `3.12.0` (or ensure the `.python-version` file is in your root).
+
+> [!IMPORTANT]
+> **Python Version**: Machine learning libraries like TensorFlow do not yet support Python 3.14. I have added a `.python-version` file to the root to force Render to use **Python 3.12**.
 
 ### Step 2: Update Frontend API URL
 Before deploying the frontend, you must tell it where your Render backend is located.
