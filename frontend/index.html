@@ -264,6 +264,9 @@
     </div>
 
     <script>
+        // API Configuration: Leave empty for monolith deployment, or add your Render URL for decoupled deployment
+        const API_BASE_URL = ""; 
+
         lucide.createIcons();
 
         function updateEpsilon(val) {
@@ -281,7 +284,7 @@
             addLog(`Analyzing sequence: ${url}`, 'info');
             
             try {
-                const response = await fetch('/analyze', {
+                const response = await fetch(`${API_BASE_URL}/analyze`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ url, defenses, epsilon: parseFloat(epsilon) })
@@ -369,7 +372,7 @@
         }
 
         async function renderAttackGallery(url) {
-            const resp = await fetch('/attack', {
+            const resp = await fetch(`${API_BASE_URL}/attack`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ url })
@@ -396,7 +399,7 @@
             body.scrollTop = body.scrollHeight;
         }
 
-        function downloadReport() { window.location.href = '/generate-report'; }
+        function downloadReport() { window.location.href = `${API_BASE_URL}/generate-report`; }
     </script>
 </body>
 </html>

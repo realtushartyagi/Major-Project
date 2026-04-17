@@ -96,9 +96,36 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 ---
 
-## ⚠️ 4. Critical Production Checklist
+## 🌐 5. Advanced: Decoupled Deployment (Render + Vercel)
+
+If you want to host the **Backend on Render** and the **Frontend on Vercel**, follow these specific steps.
+
+### Step 1: Backend Deployment (Render)
+1.  **Create a New Web Service**: Connect your GitHub repository.
+2.  **Environment**: Select `Python`.
+3.  **Root Directory**: Leave as `.` (project root).
+4.  **Build Command**: `pip install -r backend/requirements.txt`
+5.  **Start Command**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+6.  **Environment Variables**: Ensure you have enough memory (at least 2GB Starter instance recommended).
+
+### Step 2: Update Frontend API URL
+Before deploying the frontend, you must tell it where your Render backend is located.
+1.  Open `frontend/index.html`.
+2.  Locate `const API_BASE_URL = "";`.
+3.  Replace it with your Render service URL (e.g., `https://sentinel-backend.onrender.com`).
+
+### Step 3: Frontend Deployment (Vercel)
+1.  **Create a New Project**: Connect your GitHub repository.
+2.  **Framework Preset**: Select `Other`.
+3.  **Root Directory**: Leave as `.` (project root).
+4.  **Output Directory**: Set to `frontend`.
+5.  **Build Command**: Leave empty.
+
+---
+
+## ⚠️ 6. Critical Production Checklist
 
 > [!IMPORTANT]
-> - **CORS**: The current frontend uses relative paths (e.g., `fetch('/analyze')`). This works perfectly if the frontend and backend are served from the same domain.
-> - **Model Paths**: Ensure the `models/` folder is at the same level as `backend/` and `frontend/` so the relative paths in `main.py` resolve correctly.
-> - **Memory**: TensorFlow and PyTorch can be memory-heavy. Ensure your production server has at least **2GB of RAM**.
+> - **CORS**: I have already enabled `CORSMiddleware` in `backend/main.py`. This allows your Vercel frontend to talk to your Render backend securely.
+> - **Model Paths**: In `main.py`, models are loaded relative to the file. Ensure the `models/` folder is uploaded to Render alongside the `backend/` folder.
+> - **Memory**: TensorFlow and PyTorch can be memory-heavy. If your Render service crashes with an "Out of Memory" error, upgrade to a larger instance.

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -25,6 +26,15 @@ RF_MODEL_PATH = os.path.join(BASE_DIR, "models", "rf_model.pkl")
 TOKENIZER_PATH = os.path.join(BASE_DIR, "models", "tokenizer.json")
 
 app = FastAPI(title="Sentinel-ML API v2.5 Polish")
+
+# CORS Configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="../frontend"), name="static")
