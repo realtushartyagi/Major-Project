@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -25,7 +26,42 @@ LR_MODEL_PATH = os.path.join(BASE_DIR, "models", "lr_model.pkl")
 RF_MODEL_PATH = os.path.join(BASE_DIR, "models", "rf_model.pkl")
 TOKENIZER_PATH = os.path.join(BASE_DIR, "models", "tokenizer.json")
 
-app = FastAPI(title="Sentinel-ML API v2.5 Polish")
+# Global state
+model = None
+lr_model = None
+rf_model = None
+tokenizer = None
+engine = None
+
+# Analysis State Store (for Report Generation)
+latest_analysis = {}
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global model, lr_model, rf_model, tokenizer, engine
+    try:
+        from backend.model_utils import URLTokenizer
+        from backend.adversarial_engine import AdversarialEngine
+
+        if os.path.exists(MODEL_PATH) and os.path.exists(TOKENIZER_PATH):
+            model = tf.keras.models.load_model(MODEL_PATH)
+            # Recompile to ensure metrics are built and avoid compile_metrics warning
+            model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+            tokenizer = URLTokenizer.load(TOKENIZER_PATH)
+            engine = AdversarialEngine(model, tokenizer)
+
+            if os.path.exists(LR_MODEL_PATH):
+                with open(LR_MODEL_PATH, 'rb') as f:
+                    lr_model = pickle.load(f)
+            if os.path.exists(RF_MODEL_PATH):
+                with open(RF_MODEL_PATH, 'rb') as f:
+                    rf_model = pickle.load(f)
+            print("Sentinel-ML Engine: Models Loaded.")
+    except Exception as e:
+        print(f"Engine Startup Warning: {e}. Switching to restricted mode.")
+    yield
+
+app = FastAPI(title="Sentinel-ML API v2.5 Polish", lifespan=lifespan)
 
 # CORS Configuration
 app.add_middleware(
@@ -39,41 +75,13 @@ app.add_middleware(
 # Mount Static Files
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "frontend")), name="static")
 
-# Global state
-model = None
-lr_model = None
-rf_model = None
-tokenizer = None
-engine = None
-
-# Analysis State Store (for Report Generation)
-latest_analysis = {}
-
-@app.on_event("startup")
-def startup_event():
-    global model, lr_model, rf_model, tokenizer, engine
-    try:
-        from backend.model_utils import URLTokenizer
-        from backend.adversarial_engine import AdversarialEngine
-        
-        if os.path.exists(MODEL_PATH) and os.path.exists(TOKENIZER_PATH):
-            model = tf.keras.models.load_model(MODEL_PATH)
-            tokenizer = URLTokenizer.load(TOKENIZER_PATH)
-            engine = AdversarialEngine(model, tokenizer)
-            
-            if os.path.exists(LR_MODEL_PATH):
-                with open(LR_MODEL_PATH, 'rb') as f:
-                    lr_model = pickle.load(f)
-            if os.path.exists(RF_MODEL_PATH):
-                with open(RF_MODEL_PATH, 'rb') as f:
-                    rf_model = pickle.load(f)
-            print("Sentinel-ML Engine: Models Loaded.")
-    except Exception as e:
-        print(f"Engine Startup Warning: {e}. Switching to restricted mode.")
-
 @app.get("/")
 async def read_index():
     return FileResponse(os.path.join(BASE_DIR, "frontend", "index.html"))
+
+@app.head("/")
+async def head_index():
+    return Response(status_code=200)
 
 class URLRequest(BaseModel):
     url: str
