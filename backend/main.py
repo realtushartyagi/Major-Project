@@ -53,8 +53,8 @@ latest_analysis = {}
 def startup_event():
     global model, lr_model, rf_model, tokenizer, engine
     try:
-        from model_utils import URLTokenizer
-        from adversarial_engine import AdversarialEngine
+        from backend.model_utils import URLTokenizer
+        from backend.adversarial_engine import AdversarialEngine
         
         if os.path.exists(MODEL_PATH) and os.path.exists(TOKENIZER_PATH):
             model = tf.keras.models.load_model(MODEL_PATH)
@@ -83,7 +83,7 @@ class URLRequest(BaseModel):
 @app.post("/analyze")
 async def analyze_url(req: URLRequest):
     global latest_analysis
-    from adversarial_engine import DefensiveSanitizer
+    from backend.adversarial_engine import DefensiveSanitizer
     
     # --- 1. CLEAN STAGE ---
     clean_url = DefensiveSanitizer.normalize_url(req.url)
