@@ -26,7 +26,7 @@ Sentinel-ML is a sophisticated defense framework designed to protect Machine Lea
 ### 2. Setup & Installation
 ```bash
 # Install dependencies
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 3. Training the Model

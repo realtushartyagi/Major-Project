@@ -19,7 +19,7 @@ Render is an excellent platform for hosting Python FastAPI applications, especia
    - **Name:** `sentinel-ml-api` (or your preferred name)
    - **Root Directory:** `.` (Leave blank or set to root so it has access to the `models/` directory)
    - **Environment:** `Python 3`
-   - **Build Command:** `pip install -r backend/requirements.txt`
+   - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
 4. **Environment Variables:**
    - Click on "Advanced".

@@ -1,1 +1,15 @@
--r backend/requirements.txt
+fastapi
+uvicorn
+pydantic
+scikit-learn
+pandas
+numpy
+tensorflow
+torch
+adversarial-robustness-toolbox
+shap
+validators
+python-multipart
+requests
+python-dotenv
+reportlab
