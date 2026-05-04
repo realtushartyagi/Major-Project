@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import os
@@ -24,10 +25,24 @@ LR_MODEL_PATH = os.path.join(BASE_DIR, "models", "lr_model.pkl")
 RF_MODEL_PATH = os.path.join(BASE_DIR, "models", "rf_model.pkl")
 TOKENIZER_PATH = os.path.join(BASE_DIR, "models", "tokenizer.json")
 
-app = FastAPI(title="Sentinel-ML API v2.5 Polish")
+app = FastAPI(title="Sentinel-ML API v2.6 Production")
 
-# Mount Static Files
-app.mount("/static", StaticFiles(directory="../frontend"), name="static")
+# Enable CORS for Vercel deployment
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+# Mount Static Files using absolute path
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+else:
+    print(f"Warning: Frontend directory not found at {FRONTEND_DIR}")
 
 # Global state
 model = None
@@ -63,7 +78,19 @@ def startup_event():
 
 @app.get("/")
 async def read_index():
-    return FileResponse("../frontend/index.html")
+    index_path = os.path.join(FRONTEND_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"error": "Frontend UI not found. Please check directory structure."}
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "online",
+        "model_loaded": model is not None,
+        "tokenizer_loaded": tokenizer is not None,
+        "engine_ready": engine is not None
+    }
 
 class URLRequest(BaseModel):
     url: str

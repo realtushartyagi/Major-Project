@@ -1,8 +1,8 @@
  {
-     "rewrites": [
-       {
-         "source": "/:path*",
-         "destination": "https://<YOUR_RENDER_URL>/:path*"
-       }
-     ]
-   }
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "destination": "https://major-project-jmfj.onrender.com/:path*"
+    }
+  ]
+}
